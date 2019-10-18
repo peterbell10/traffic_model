@@ -32,10 +32,10 @@ int main(int argc, char ** argv)
 	for (int i = 0; i < size-1; ++i) {
 		MPI_Request send_request[2];
 		MPI_Request recv_request[2];
-		MPI_Issend(&road_old[0], 1, MPI_BOOL, left_neighbour, 0, comm, &send_request[0]);
-		MPI_Issend(&road_old[N-1], 1, MPI_BOOL, right_neighbour, 0, comm, &send_request[1]);
-		MPI_Irecv(&halo_left, 1, MPI_BOOL, left_neighbour, 0, comm, MPI_STATUS_IGNORE, &recv_request[0]);
-		MPI_Irecv(&halo_right, 1, MPI_BOOL, right_neighbour, 0, comm, MPI_STATUS_IGNORE, &recv_request[1]);
+		MPI_Issend(&road_old[0], 1, MPI_C_BOOL, left_neighbour, 0, comm, &send_request[0]);
+		MPI_Issend(&road_old[N-1], 1, MPI_C_BOOL, right_neighbour, 0, comm, &send_request[1]);
+		MPI_Irecv(&halo_left, 1, MPI_C_BOOL, left_neighbour, 0, comm, &recv_request[0]);
+		MPI_Irecv(&halo_right, 1, MPI_C_BOOL, right_neighbour, 0, comm, &recv_request[1]);
 
 		// Update centre cells
 		for (size_t j = 1; j + 1 < N; ++j) {
