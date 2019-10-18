@@ -1,8 +1,8 @@
 
 #include <mpi.h>
 #include <cstdio>
+#include <random>
 #include <algorithm>
-#include <numeric>
 #include <cmath>
 
 constexpr size_t N = 10000;
@@ -18,16 +18,17 @@ int main(int argc, char ** argv)
 	MPI_Comm_rank(comm, &rank);
 	MPI_Comm_size(comm, &size);
 
-  double current = std::pow(rank + 1, 2);
+	const int left_neighbour = (rank + size - 1) % size;
+	const int right_neighbour = (rank + 1) % size;
 
-  double sum = current;
-  const int left_neighbour = (rank + size - 1) % size;
-  const int right_neighbour = (rank + 1) % size;
+	std::mt19937 rng{std::random_device{}()};
+	std::bernoulli_distribution dist(.2);
+	std::generate_n(road1, N, [&]{ return dist(rng); });
 
-  bool * road_old = road1;
-  bool * road_new = road2;
+	bool * road_old = road1;
+	bool * road_new = road2;
 
-  bool halo_left, halo_right;
+	bool halo_left, halo_right;
 
 	for (int i = 0; i < size-1; ++i) {
 		MPI_Request send_request[2];
@@ -40,7 +41,7 @@ int main(int argc, char ** argv)
 		// Update centre cells
 		for (size_t j = 1; j + 1 < N; ++j) {
 			road_new[j] =
-				(road_old[j] & !road_old[j+1]) |
+				(road_old[j] & road_old[j+1]) |
 				(road_old[j-1] & !road_old[j]);
 		}
 
@@ -49,20 +50,24 @@ int main(int argc, char ** argv)
 
 		// Update boundary cells
 		road_new[0] =
-			(road_old[0] & !road_old[i+1]) |
-			(halo_left & !road_old[i]);
+			(road_old[0] & road_old[1]) |
+			(halo_left & !road_old[0]);
 
 		road_new[N-1] =
-			(road_old[0] & !halo_right) |
-			(road_old[N-2] & !road_old[i]);
+			(road_old[N-1] & halo_right) |
+			(road_old[N-2] & !road_old[N-1]);
 
 		MPI_Wait(&send_request[0], MPI_STATUS_IGNORE);
 		MPI_Wait(&send_request[1], MPI_STATUS_IGNORE);
 
-		std::swap(road1, road2);
+		std::swap(road_old, road_new);
 	}
 
-  printf("Sum on rank %d: %lf\n", rank, sum);
+    printf("Road on rank %d", rank);
+    for (int i = 0; i < N; ++i) {
+	    printf("%c", road_old[i] ? 'X' : '-');
+    }
+    puts("\n");
 
 	MPI_Finalize();
 }
